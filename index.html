@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1A2B 數字解密 - 經典邏輯推理遊戲</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Microsoft JhengHei', 'PingFang TC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JS Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;800&display=swap');
+
+        /* 自訂滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+
+        /* 磨砂玻璃效果 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* 錯誤輸入抖動動畫 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .digit-input:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen font-sans transition-colors duration-300 flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+
+    <!-- 頂部導覽列 -->
+    <header class="w-full border-b border-slate-200 dark:border-slate-800 glass-panel sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                    <i class="fa-solid fa-brain text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide bg-gradient-to-r from-brand-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent">
+                        1A2B 數字解密
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">邏輯破譯 · 經典推理解謎</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button id="btnChangePlayerHeader" class="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-brand-500 hover:text-white transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-gear text-xs"></i>
+                    <span class="hidden sm:inline" id="headerPlayerName">Player 1</span>
+                </button>
+                <button id="btnRules" class="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5" title="遊戲規則">
+                    <i class="fa-regular fa-circle-question text-base"></i>
+                    <span class="hidden sm:inline">規則說明</span>
+                </button>
+                <button id="btnThemeToggle" class="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors" title="切換主題">
+                    <i class="fa-solid fa-moon dark:hidden text-lg"></i>
+                    <i class="fa-solid fa-sun hidden dark:block text-lg text-amber-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區塊 -->
+    <main class="max-w-4xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6">
+
+        <!-- 控制與數據狀態欄 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- 當前玩家與猜測次數 -->
+            <div class="glass-panel rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                <div class="flex-1 pr-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">當前玩家 (User ID)</span>
+                    <div class="flex items-center justify-between mt-1">
+                        <span id="displayPlayerName" class="font-extrabold text-base text-brand-600 dark:text-brand-400 truncate max-w-[120px]">Player 1</span>
+                        <button id="btnEditPlayer" class="text-xs text-slate-400 hover:text-brand-500 transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-pen-to-square"></i> 修改
+                        </button>
+                    </div>
+                </div>
+                <div class="text-right pl-3 border-l border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">猜測次數</span>
+                    <div class="text-2xl font-extrabold text-brand-600 dark:text-brand-500">
+                        <span id="guessCount">0</span> <span class="text-xs font-normal text-slate-400">次</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 除錯模式 Switch (核心要求) -->
+            <div class="glass-panel rounded-2xl p-4 flex items-center justify-between shadow-sm relative">
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">除錯模式</span>
+                        <span class="relative flex h-2 w-2">
+                          <span id="debugPing" class="hidden animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span id="debugDot" class="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+                        </span>
+                    </div>
+                    <div class="mt-1 font-mono font-bold text-xl flex items-center gap-2">
+                        <span id="answerDisplay" class="tracking-widest text-slate-400 select-none">解答：????</span>
+                    </div>
+                </div>
+
+                <!-- 開關按鈕 -->
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggleDebug" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-amber-500"></div>
+                </label>
+            </div>
+
+            <!-- 開新局按鈕 -->
+            <div class="glass-panel rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                <div>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">當前狀態</span>
+                    <div id="gameStatusText" class="text-sm font-bold text-emerald-500 mt-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-play text-xs"></i> 進行中...
+                    </div>
+                </div>
+                <button id="btnNewGame" class="px-4 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white rounded-xl font-semibold shadow-md shadow-brand-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-rotate-right"></i> 開新局
+                </button>
+            </div>
+        </div>
+
+        <!-- 遊戲主分頁區 -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            
+            <!-- 左側：輸入區與數字盤 -->
+            <div class="md:col-span-5 flex flex-col gap-4">
+                <div id="inputCard" class="glass-panel rounded-2xl p-6 shadow-md border border-slate-200 dark:border-slate-800">
+                    <h2 class="text-base font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-keyboard text-brand-500"></i> 請輸入 4 個不重複數字
+                    </h2>
+
+                    <!-- 4 位數獨立輸入框 -->
+                    <form id="guessForm" onsubmit="return false;">
+                        <div class="flex justify-between items-center gap-2 mb-4" id="digitContainer">
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="digit-input w-14 h-16 sm:w-16 sm:h-20 text-center font-mono font-extrabold text-2xl sm:text-3xl rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-all focus:border-brand-500 dark:focus:border-brand-500 focus:outline-none" data-index="0" autocomplete="off" autofocus>
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="digit-input w-14 h-16 sm:w-16 sm:h-20 text-center font-mono font-extrabold text-2xl sm:text-3xl rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-all focus:border-brand-500 dark:focus:border-brand-500 focus:outline-none" data-index="1" autocomplete="off">
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="digit-input w-14 h-16 sm:w-16 sm:h-20 text-center font-mono font-extrabold text-2xl sm:text-3xl rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-all focus:border-brand-500 dark:focus:border-brand-500 focus:outline-none" data-index="2" autocomplete="off">
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="digit-input w-14 h-16 sm:w-16 sm:h-20 text-center font-mono font-extrabold text-2xl sm:text-3xl rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-all focus:border-brand-500 dark:focus:border-brand-500 focus:outline-none" data-index="3" autocomplete="off">
+                        </div>
+
+                        <!-- 錯誤提示訊息框 -->
+                        <div id="alertMessage" class="hidden rounded-xl p-3 mb-4 text-xs font-semibold flex items-center gap-2 border transition-all">
+                            <i id="alertIcon" class="fa-solid fa-circle-exclamation text-base"></i>
+                            <span id="alertText"></span>
+                        </div>
+
+                        <!-- 操作按鈕區 -->
+                        <div class="flex gap-2">
+                            <button type="button" id="btnClear" class="px-4 py-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 text-sm" title="清空輸入框">
+                                <i class="fa-solid fa-eraser"></i> 清除
+                            </button>
+                            <button type="submit" id="btnSubmit" class="flex-1 py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 transition-all flex items-center justify-center gap-2 text-sm active:scale-98">
+                                <i class="fa-solid fa-paper-plane"></i> 提交猜測
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- 手機端/方便輔助的數字盤 -->
+                    <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <div class="text-xs font-medium text-slate-400 mb-2 flex justify-between items-center">
+                            <span>數字快捷鍵盤</span>
+                            <span class="text-[10px] text-slate-400">點擊填入 / 自動跳格</span>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1.5" id="quickKeypad">
+                            <!-- 0-9 按鈕動態渲染 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 勝利賀卡 (獲得 4A0B 時顯示) -->
+                <div id="victoryCard" class="hidden glass-panel rounded-2xl p-6 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 text-center animate-bounce-short">
+                    <div class="w-14 h-14 bg-emerald-500 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg shadow-emerald-500/30">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-emerald-600 dark:text-emerald-400 mb-1">恭喜通關！破解成功！</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">玩家 <span id="victoryPlayer" class="font-bold text-brand-600 dark:text-brand-400">Player 1</span> 一共花了 <span id="finalCount" class="font-bold text-slate-800 dark:text-slate-200">0</span> 次解開答案。</p>
+                    <div class="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 font-mono font-bold text-2xl px-4 py-2 rounded-xl border border-emerald-500/20 mb-4">
+                        <i class="fa-solid fa-key text-sm"></i> 解答：<span id="victoryAnswer">----</span>
+                    </div>
+                    <div>
+                        <button id="btnPlayAgain" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mx-auto">
+                            <i class="fa-solid fa-rotate-right"></i> 再來一局
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：歷史猜測紀錄區塊 -->
+            <div class="md:col-span-7 flex flex-col gap-4">
+                <div class="glass-panel rounded-2xl p-6 shadow-md border border-slate-200 dark:border-slate-800 flex-1 flex flex-col min-h-[380px]">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+                        <h2 class="text-base font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-brand-500"></i> 猜測歷史紀錄
+                        </h2>
+                        <span class="text-xs px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">
+                            共 <span id="historyCount">0</span> 筆
+                        </span>
+                    </div>
+
+                    <!-- 歷史列表容器 -->
+                    <div id="historyList" class="flex-1 overflow-y-auto max-h-[420px] pr-1 space-y-2.5">
+                        <!-- 空狀態提示 -->
+                        <div id="emptyHistory" class="h-full flex flex-col items-center justify-center py-12 text-slate-400">
+                            <i class="fa-solid fa-list-check text-4xl mb-2 opacity-50"></i>
+                            <p class="text-sm font-medium">尚無猜測紀錄，請開始輸入！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 玩家代號輸入/開局 Modal 彈窗 -->
+    <div id="playerModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="glass-panel max-w-sm w-full rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div class="text-center mb-5">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-400 text-white flex items-center justify-center text-xl mx-auto mb-2 shadow-lg shadow-brand-500/30">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-800 dark:text-slate-100">準備開始解密</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">請先輸入您的玩家暱稱或代號</p>
+            </div>
+
+            <form id="playerForm" onsubmit="return false;" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">玩家代號 (Player ID)</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user-tag absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="text" id="modalPlayerInput" placeholder="請輸入玩家暱稱或代號" maxlength="15" class="w-full pl-10 pr-24 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand-500 text-sm">
+                        <button type="button" id="btnRandomPlayer" class="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-lg transition-colors">
+                            <i class="fa-solid fa-dice"></i> 隨機
+                        </button>
+                    </div>
+                    <p id="playerInputError" class="hidden text-xs text-red-500 mt-1 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-circle-exclamation"></i> 請填寫玩家代號！
+                    </p>
+                </div>
+
+                <button type="submit" id="btnStartGameConfirm" class="w-full py-3.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-extrabold rounded-xl shadow-lg shadow-brand-500/30 transition-all flex items-center justify-center gap-2 text-base">
+                    進入遊戲 <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 規則 Modal 彈窗 -->
+    <div id="rulesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="glass-panel max-w-lg w-full rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 transform scale-95 transition-transform duration-300 bg-white dark:bg-slate-900" id="rulesModalContent">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-book-open text-brand-500"></i> 1A2B 遊戲規則
+                </h3>
+                <button id="btnCloseRules" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                <p>系統會隨機產生一組由 <strong class="text-brand-500">0～9 組成的 4 個不重複數字</strong>（可由 0 開頭，例如 0123）。每次猜測輸入 4 個位置後，會獲得提示：</p>
+                <ul class="space-y-2 bg-slate-100 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                    <li class="flex items-start gap-2">
+                        <span class="inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs mt-0.5">A</span>
+                        <span><strong>數字與位置皆正確</strong>：例如猜 1234 且 1 正確在第 1 位。</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="inline-block px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold font-mono text-xs mt-0.5">B</span>
+                        <span><strong>數字正確但位置不同</strong>：例如答案有 1 但不在第 1 位。</span>
+                    </li>
+                </ul>
+                <div class="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                    <p><i class="fa-solid fa-check text-emerald-500"></i> 得到 <strong class="text-emerald-500">4A0B</strong> 即破解成功完成本局。</p>
+                    <p><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> 空白、非數字、不是 4 位或有重複數字均為無效猜測，系統會提示修正且不計算次數。</p>
+                </div>
+            </div>
+
+            <button id="btnGotRules" class="mt-5 w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition-all text-sm">
+                開始解密！
+            </button>
+        </div>
+    </div>
+
+    <!-- 頁腳 -->
+    <footer class="w-full border-t border-slate-200 dark:border-slate-800 py-3 text-center text-xs text-slate-400">
+        1A2B Logic Master Game &copy; 2026. Design for standard 1A2B specification.
+    </footer>
+
+    <!-- JavaScript 遊戲核心邏輯 -->
+    <script>
+        // 遊戲狀態變數
+        let secretAnswer = [];       // 當前解答字串陣列 e.g. ['0','1','2','3']
+        let isDebugMode = false;     // 除錯模式開關狀態
+        let isGameOver = false;      // 本局完成狀態
+        let guessHistory = [];       // 猜測紀錄
+        let currentPlayerName = "Player 1"; // 當前玩家名稱
+
+        // DOM 元素引用
+        const digitInputs = Array.from(document.querySelectorAll('.digit-input'));
+        const displayPlayerName = document.getElementById('displayPlayerName');
+        const headerPlayerName = document.getElementById('headerPlayerName');
+        const playerModal = document.getElementById('playerModal');
+        const modalPlayerInput = document.getElementById('modalPlayerInput');
+        const playerForm = document.getElementById('playerForm');
+        const playerInputError = document.getElementById('playerInputError');
+        const btnRandomPlayer = document.getElementById('btnRandomPlayer');
+        const btnEditPlayer = document.getElementById('btnEditPlayer');
+        const btnChangePlayerHeader = document.getElementById('btnChangePlayerHeader');
+
+        const toggleDebug = document.getElementById('toggleDebug');
+        const answerDisplay = document.getElementById('answerDisplay');
+        const debugDot = document.getElementById('debugDot');
+        const debugPing = document.getElementById('debugPing');
+        const guessCountEl = document.getElementById('guessCount');
+        const historyList = document.getElementById('historyList');
+        const emptyHistory = document.getElementById('emptyHistory');
+        const historyCountEl = document.getElementById('historyCount');
+        const alertMessage = document.getElementById('alertMessage');
+        const alertText = document.getElementById('alertText');
+        const alertIcon = document.getElementById('alertIcon');
+        const btnNewGame = document.getElementById('btnNewGame');
+        const btnClear = document.getElementById('btnClear');
+        const btnSubmit = document.getElementById('btnSubmit');
+        const victoryCard = document.getElementById('victoryCard');
+        const victoryAnswer = document.getElementById('victoryAnswer');
+        const victoryPlayer = document.getElementById('victoryPlayer');
+        const finalCount = document.getElementById('finalCount');
+        const btnPlayAgain = document.getElementById('btnPlayAgain');
+        const gameStatusText = document.getElementById('gameStatusText');
+        const quickKeypad = document.getElementById('quickKeypad');
+        const rulesModal = document.getElementById('rulesModal');
+        const rulesModalContent = document.getElementById('rulesModalContent');
+        const btnRules = document.getElementById('btnRules');
+        const btnCloseRules = document.getElementById('btnCloseRules');
+        const btnGotRules = document.getElementById('btnGotRules');
+        const btnThemeToggle = document.getElementById('btnThemeToggle');
+
+        // 頁面載入完成後初始化
+        window.onload = () => {
+            initQuickKeypad();
+            initTheme();
+            bindEvents();
+            openPlayerModal(); // 強制先輸入玩家暱稱
+        };
+
+        // 開啟玩家代號輸入 Modal
+        function openPlayerModal() {
+            if (!modalPlayerInput.value.trim()) {
+                generateRandomPlayerID();
+            }
+            playerInputError.classList.add('hidden');
+            playerModal.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => modalPlayerInput.focus(), 100);
+        }
+
+        // 隨機玩家名稱產生器
+        function generateRandomPlayerID() {
+            modalPlayerInput.value = `Player_${Math.floor(100 + Math.random() * 900)}`;
+        }
+
+        // 關閉 Modal 並啟用局
+        function confirmPlayerAndStart() {
+            const val = modalPlayerInput.value.trim();
+            if (!val) {
+                playerInputError.classList.remove('hidden');
+                return;
+            }
+            playerInputError.classList.add('hidden');
+            currentPlayerName = val;
+            displayPlayerName.textContent = currentPlayerName;
+            headerPlayerName.textContent = currentPlayerName;
+
+            playerModal.classList.add('opacity-0', 'pointer-events-none');
+            startNewGame();
+        }
+
+        // 深淺主題初始化
+        function initTheme() {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        // 產生 4 個 0-9 不重複數字答案 (允許 0 開頭)
+        function generateSecretAnswer() {
+            const digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            const result = [];
+            for (let i = 0; i < 4; i++) {
+                const randomIndex = Math.floor(Math.random() * digits.length);
+                result.push(digits[randomIndex]);
+                digits.splice(randomIndex, 1);
+            }
+            return result;
+        }
+
+        // 開始 / 開新局遊戲
+        function startNewGame() {
+            secretAnswer = generateSecretAnswer();
+            isGameOver = false;
+            guessHistory = [];
+            
+            // 規格要求：初次開啟及切換到另一局時，預設關閉除錯顯示
+            isDebugMode = false;
+            toggleDebug.checked = false;
+
+            // UI 狀態重設
+            clearInputs();
+            hideAlert();
+            renderHistory();
+            updateDebugDisplay();
+            
+            // 狀態卡片重置
+            gameStatusText.className = "text-sm font-bold text-emerald-500 mt-1 flex items-center gap-1.5";
+            gameStatusText.innerHTML = `<i class="fa-solid fa-play text-xs"></i> 進行中...`;
+            
+            // 隱藏勝利卡片
+            victoryCard.classList.add('hidden');
+            
+            // 啟用輸入元件
+            digitInputs.forEach(input => {
+                input.disabled = false;
+            });
+            btnSubmit.disabled = false;
+            btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // 自動聚焦第一個輸入框
+            digitInputs[0].focus();
+        }
+
+        // 渲染數字輔助盤
+        function initQuickKeypad() {
+            quickKeypad.innerHTML = '';
+            for (let i = 0; i <= 9; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'py-2 rounded-lg bg-slate-200/70 dark:bg-slate-800 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-500 text-slate-700 dark:text-slate-300 font-mono font-bold text-base transition-colors flex items-center justify-center';
+                btn.textContent = i;
+                btn.addEventListener('click', () => handleKeypadClick(i.toString()));
+                quickKeypad.appendChild(btn);
+            }
+        }
+
+        // 數字鍵盤點擊動作
+        function handleKeypadClick(digit) {
+            if (isGameOver) return;
+            hideAlert();
+
+            // 尋找第一個尚未填寫的輸入框
+            const emptyInput = digitInputs.find(input => input.value === '');
+            if (emptyInput) {
+                emptyInput.value = digit;
+                const nextIndex = parseInt(emptyInput.dataset.index) + 1;
+                if (nextIndex < 4) {
+                    digitInputs[nextIndex].focus();
+                }
+            }
+        }
+
+        // 事件監聽繫結
+        function bindEvents() {
+            // 切換深淺模式
+            btnThemeToggle.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+            });
+
+            // 玩家 Modal 控制
+            btnRandomPlayer.addEventListener('click', generateRandomPlayerID);
+            playerForm.addEventListener('submit', confirmPlayerAndStart);
+            btnEditPlayer.addEventListener('click', openPlayerModal);
+            btnChangePlayerHeader.addEventListener('click', openPlayerModal);
+
+            // 規則視窗按鈕
+            btnRules.addEventListener('click', openRulesModal);
+            btnCloseRules.addEventListener('click', closeRulesModal);
+            btnGotRules.addEventListener('click', closeRulesModal);
+            rulesModal.addEventListener('click', (e) => {
+                if (e.target === rulesModal) closeRulesModal();
+            });
+
+            // 除錯模式開關
+            toggleDebug.addEventListener('change', (e) => {
+                isDebugMode = e.target.checked;
+                updateDebugDisplay();
+            });
+
+            // 開新局按鈕
+            btnNewGame.addEventListener('click', openPlayerModal);
+            if (btnPlayAgain) {
+                btnPlayAgain.addEventListener('click', openPlayerModal);
+            }
+
+            // 清空輸入按鈕
+            btnClear.addEventListener('click', clearInputs);
+
+            // 表單提交
+            document.getElementById('guessForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                processGuessSubmit();
+            });
+
+            // 輸入框跳格與方向鍵操控
+            digitInputs.forEach((input, index) => {
+                input.addEventListener('keydown', (e) => {
+                    hideAlert();
+                    if (e.key === 'Backspace') {
+                        if (input.value === '' && index > 0) {
+                            digitInputs[index - 1].focus();
+                        }
+                    } else if (e.key === 'ArrowLeft' && index > 0) {
+                        digitInputs[index - 1].focus();
+                    } else if (e.key === 'ArrowRight' && index < 3) {
+                        digitInputs[index + 1].focus();
+                    }
+                });
+
+                input.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    
+                    if (!/^\d*$/.test(val)) {
+                        e.target.value = '';
+                        showAlert('僅能輸入數字 0～9！', 'error');
+                        return;
+                    }
+
+                    if (val.length >= 1) {
+                        e.target.value = val.slice(-1);
+                        if (index < 3) {
+                            digitInputs[index + 1].focus();
+                        }
+                    }
+                });
+
+                input.addEventListener('focus', (e) => {
+                    e.target.select();
+                });
+            });
+        }
+
+        // 規則 Modal 控制
+        function openRulesModal() {
+            rulesModal.classList.remove('opacity-0', 'pointer-events-none');
+            rulesModalContent.classList.remove('scale-95');
+            rulesModalContent.classList.add('scale-100');
+        }
+
+        function closeRulesModal() {
+            rulesModal.classList.add('opacity-0', 'pointer-events-none');
+            rulesModalContent.classList.remove('scale-100');
+            rulesModalContent.classList.add('scale-95');
+        }
+
+        // 更新除錯模式解答顯示 (規格要求：進行中答案只在除錯模式顯示，完成後可顯示解答)
+        function updateDebugDisplay() {
+            if (isDebugMode || isGameOver) {
+                answerDisplay.textContent = `解答：${secretAnswer.join('')}`;
+                answerDisplay.classList.remove('text-slate-400');
+                answerDisplay.classList.add('text-amber-500', 'dark:text-amber-400');
+                debugDot.classList.remove('bg-slate-400');
+                debugDot.classList.add('bg-amber-400');
+                debugPing.classList.remove('hidden');
+            } else {
+                answerDisplay.textContent = '解答：????';
+                answerDisplay.classList.remove('text-amber-500', 'dark:text-amber-400');
+                answerDisplay.classList.add('text-slate-400');
+                debugDot.classList.remove('bg-amber-400');
+                debugDot.classList.add('bg-slate-400');
+                debugPing.classList.add('hidden');
+            }
+        }
+
+        // 清空 4 位輸入框
+        function clearInputs() {
+            digitInputs.forEach(input => input.value = '');
+            digitInputs[0].focus();
+            hideAlert();
+        }
+
+        // 警示提示框
+        function showAlert(msg, type = 'warning') {
+            alertText.textContent = msg;
+            alertMessage.classList.remove('hidden', 'bg-amber-500/10', 'text-amber-600', 'border-amber-500/20', 'bg-red-500/10', 'text-red-600', 'border-red-500/20');
+            
+            if (type === 'error') {
+                alertMessage.classList.add('bg-red-500/10', 'text-red-600', 'dark:text-red-400', 'border-red-500/20');
+                alertIcon.className = 'fa-solid fa-circle-xmark text-base';
+            } else {
+                alertMessage.classList.add('bg-amber-500/10', 'text-amber-600', 'dark:text-amber-400', 'border-amber-500/20');
+                alertIcon.className = 'fa-solid fa-triangle-exclamation text-base';
+            }
+
+            // 輸入卡片抖動特效
+            const card = document.getElementById('inputCard');
+            card.classList.remove('animate-shake');
+            void card.offsetWidth;
+            card.classList.add('animate-shake');
+        }
+
+        function hideAlert() {
+            alertMessage.classList.add('hidden');
+        }
+
+        // 處理猜測提交與驗證 (規格核心)
+        function processGuessSubmit() {
+            if (isGameOver) return;
+
+            const guessArr = digitInputs.map(input => input.value.trim());
+            const guessStr = guessArr.join('');
+
+            // 1. 檢查空白
+            if (guessArr.some(val => val === '')) {
+                showAlert('請完整填滿 4 個位置的數字！');
+                return;
+            }
+
+            // 2. 檢查長度
+            if (guessStr.length !== 4) {
+                showAlert('輸入必須為 4 位數字！');
+                return;
+            }
+
+            // 3. 檢查非數字
+            if (!/^\d{4}$/.test(guessStr)) {
+                showAlert('僅能輸入有效的數字（0～9）！');
+                return;
+            }
+
+            // 4. 檢查是否有重複數字
+            const uniqueDigits = new Set(guessArr);
+            if (uniqueDigits.size !== 4) {
+                showAlert('4 個位置的數字不能重複，請修正！');
+                return;
+            }
+
+            // --- 驗證通過，執行 1A2B 比對 ---
+            hideAlert();
+
+            let countA = 0;
+            let countB = 0;
+
+            for (let i = 0; i < 4; i++) {
+                if (guessArr[i] === secretAnswer[i]) {
+                    countA++;
+                } else if (secretAnswer.includes(guessArr[i])) {
+                    countB++;
+                }
+            }
+
+            // 存入猜測歷史 (包含當前玩家名稱)
+            guessHistory.unshift({
+                step: guessHistory.length + 1,
+                playerName: currentPlayerName,
+                guess: guessStr,
+                a: countA,
+                b: countB
+            });
+
+            // 更新歷史與畫面
+            renderHistory();
+            clearInputs();
+
+            // 判斷是否獲得 4A0B 完成本局
+            if (countA === 4) {
+                handleVictory(currentPlayerName);
+            }
+        }
+
+        // 本局完成處理
+        function handleVictory(winnerName) {
+            isGameOver = true;
+            
+            // 完成本局後可顯示解答
+            updateDebugDisplay();
+
+            // 狀態列更新
+            gameStatusText.className = "text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1.5";
+            gameStatusText.innerHTML = `<i class="fa-solid fa-circle-check text-xs"></i> 已完成本局！`;
+
+            // 顯示通關賀卡
+            victoryPlayer.textContent = winnerName;
+            victoryAnswer.textContent = secretAnswer.join('');
+            finalCount.textContent = guessHistory.length;
+            victoryCard.classList.remove('hidden');
+
+            // 禁用輸入
+            digitInputs.forEach(input => input.disabled = true);
+            btnSubmit.disabled = true;
+            btnSubmit.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // 觸發勝利彩帶效果
+            try {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            } catch(e) {
+                console.log('Confetti lib not ready');
+            }
+        }
+
+        // 渲染猜測歷史紀錄
+        function renderHistory() {
+            guessCountEl.textContent = guessHistory.length;
+            historyCountEl.textContent = guessHistory.length;
+
+            if (guessHistory.length === 0) {
+                emptyHistory.classList.remove('hidden');
+                historyList.innerHTML = '';
+                historyList.appendChild(emptyHistory);
+                return;
+            }
+
+            emptyHistory.classList.add('hidden');
+            historyList.innerHTML = '';
+
+            guessHistory.forEach((item, idx) => {
+                const isLatest = idx === 0;
+                const isWin = item.a === 4;
+
+                const row = document.createElement('div');
+                row.className = `flex flex-col gap-1.5 p-3 rounded-xl border transition-all ${
+                    isWin 
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' 
+                        : isLatest 
+                            ? 'bg-brand-500/5 dark:bg-brand-500/10 border-brand-500/30' 
+                            : 'bg-white/50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
+                }`;
+
+                const digitsMarkup = item.guess.split('').map(d => 
+                    `<span class="w-6 h-7 flex items-center justify-center rounded-lg bg-slate-200/70 dark:bg-slate-800 font-mono font-bold text-sm text-slate-800 dark:text-slate-100">${d}</span>`
+                ).join('');
+
+                row.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1 text-[11px]">
+                        <span class="font-mono text-slate-400 font-semibold">#${item.step}</span>
+                        <span class="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <i class="fa-regular fa-user text-[10px]"></i> ${item.playerName}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1">
+                            ${digitsMarkup}
+                        </div>
+                        <div class="flex items-center gap-1.5 font-mono font-extrabold text-base">
+                            <span class="px-2 py-0.5 rounded-lg ${item.a > 0 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}">${item.a}A</span>
+                            <span class="px-2 py-0.5 rounded-lg ${item.b > 0 ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}">${item.b}B</span>
+                        </div>
+                    </div>
+                `;
+
+                historyList.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
